@@ -1,0 +1,67 @@
+service: bibleQuoteApplication
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline #This needs to remain last in list
+custom:
+  tableName: 'quotes-table-${self:provider.stage}'
+  dynamodb:
+    stages:
+      - ${self:provider.stage}
+    start:
+      migrate: true
+  serverless-offline:
+    noPrependStageInUrl: true
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  region: us-west-2
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - !GetAtt ["QuotesDynamoDBTable", "Arn"]
+  environment:
+    QUOTES_TABLE: ${self:custom.tableName}
+
+functions:
+  app:
+    handler: index.handler
+    events:
+      - http: ANY /
+      - http: 'ANY {proxy+}'
+  getTodayQuote:
+    handler: src/handlers/getTodayQuote.quote
+    events:
+      - http: 'GET /quote/daily'
+  createQuote:
+    handler: src/handlers/createQuote.create
+    events:
+      - http: 'POST /quote'
+  getAllQuotes:
+    handler: src/handlers/getAllQuotes.quotes
+    events:
+      - http: 'GET /quotes'
+resources:
+  Resources:
+    QuotesDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: quoteId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: quoteId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.tableName}

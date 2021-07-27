@@ -1,0 +1,10 @@
+version: '3.7'
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local
+    hostname: dynamodb-local
+    container_name: dynamodb-local
+    restart: always
+    ports:
+      - "8042:8000"
